@@ -26,7 +26,9 @@
 #ifndef LWIPR_MBEDTLS_H
 #define LWIPR_MBEDTLS_H
 
+#ifndef ASYNC_TCP_SSL_ENABLED
 #define ASYNC_TCP_SSL_ENABLED     true
+#endif
 
 #include "mbedtls/platform.h"
 #include "mbedtls/net.h"

@@ -27,7 +27,9 @@
   #define _ASYNC_TCP_SSL_LOGLEVEL_       1
 #endif
 
+#ifndef ASYNC_TCP_SSL_ENABLED
 #define ASYNC_TCP_SSL_ENABLED     true
+#endif
 
 #include "tcp_mbedtls.h"
 #include "lwip/tcp.h"

@@ -53,7 +53,9 @@
 
 #define ASYNC_TCP_SSL_VERSION      "AsyncTCP_SSL v1.1.0"
 
+#ifndef ASYNC_TCP_SSL_ENABLED
 #define ASYNC_TCP_SSL_ENABLED       true
+#endif
 
 #include "IPAddress.h"
 #include "sdkconfig.h"
