@@ -1,5 +1,5 @@
 /****************************************************************************************************************************
-  AsyncTCP_SSL.hpp
+  AsyncTCP_SSL.cpp
    
   AsyncTCP_SSL is a library for ESP32
   
@@ -44,16 +44,12 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef ASYNCTCP_SSL_HPP_
-#define ASYNCTCP_SSL_HPP_
-
 #include "Arduino.h"
 
 #ifndef ASYNC_TCP_SSL_ENABLED
 #define ASYNC_TCP_SSL_ENABLED     true
 #endif
 
-//#include "AsyncTCP.h"
 #include "AsyncTCP_SSL.h"
 
 #include "AsyncTCP_SSL_Debug.h"
@@ -2196,5 +2192,3 @@ int8_t AsyncSSLServer::_s_accepted(void *arg, AsyncSSLClient* client)
 {
   return reinterpret_cast<AsyncSSLServer*>(arg)->_accepted(client);
 }
-
-#endif /* ASYNCTCP_SSL_HPP_ */

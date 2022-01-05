@@ -376,6 +376,5 @@ class AsyncSSLServer
     int8_t _accepted(AsyncSSLClient* client);
 };
 
-#include "AsyncTCP_SSL.hpp"
 
 #endif /* ASYNCTCP_SSL_H_ */
