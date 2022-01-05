@@ -2033,6 +2033,9 @@ AsyncSSLServer::AsyncSSLServer(IPAddress addr, uint16_t port)
   , _pcb(0)
   , _connect_cb(0)
   , _connect_cb_arg(0)
+#if ASYNC_TCP_SSL_ENABLED
+  , _secure(false)
+#endif
 {}
 
 AsyncSSLServer::AsyncSSLServer(uint16_t port)
@@ -2042,6 +2045,9 @@ AsyncSSLServer::AsyncSSLServer(uint16_t port)
   , _pcb(0)
   , _connect_cb(0)
   , _connect_cb_arg(0)
+#if ASYNC_TCP_SSL_ENABLED
+  , _secure(false)
+#endif
 {}
 
 AsyncSSLServer::~AsyncSSLServer()
@@ -2065,6 +2071,10 @@ void AsyncSSLServer::begin()
   {
     return;
   }
+
+#if ASYNC_TCP_SSL_ENABLED
+  _secure = false;
+#endif
 
   if (!_start_async_task())
   {
@@ -2176,6 +2186,12 @@ void AsyncSSLServer::end()
 {
   if (_pcb)
   {
+#if ASYNC_TCP_SSL_ENABLED
+    if (_secure)
+    {
+      tcp_ssl_free(_pcb);
+    }
+#endif // ASYNC_TCP_SSL_ENABLED
     tcp_arg(_pcb, NULL);
     tcp_accept(_pcb, NULL);
 
@@ -2216,6 +2232,16 @@ int8_t AsyncSSLServer::_accept(tcp_pcb* pcb, int8_t err)
 
 int8_t AsyncSSLServer::_accepted(AsyncSSLClient* client)
 {
+#if ASYNC_TCP_SSL_ENABLED
+  if (_secure)
+  {
+    client->onConnect([this](void * arg, AsyncClient *c)
+    {
+      _connect_cb(_connect_cb_arg, c);
+    }, this);
+  }
+  else
+#endif
   if (_connect_cb)
   {
     _connect_cb(_connect_cb_arg, client);

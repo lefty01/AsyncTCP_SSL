@@ -369,6 +369,9 @@ class AsyncSSLServer
 #endif
     
     void*             _connect_cb_arg;
+#if ASYNC_TCP_SSL_ENABLED
+    bool _secure;
+#endif
 
     int8_t _accept(tcp_pcb* newpcb, int8_t err);
     int8_t _accepted(AsyncSSLClient* client);
