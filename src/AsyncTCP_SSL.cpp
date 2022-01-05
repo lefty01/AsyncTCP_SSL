@@ -2069,7 +2069,6 @@ void AsyncSSLServer::begin()
   if (!_start_async_task())
   {
     ATCP_LOGERROR("begin: failed to start task");
-    
     return;
   }
 
@@ -2079,7 +2078,6 @@ void AsyncSSLServer::begin()
   if (!_pcb)
   {
     ATCP_LOGERROR("begin: NULL pcb");
-    
     return;
   }
 
@@ -2093,7 +2091,6 @@ void AsyncSSLServer::begin()
     _tcp_close(_pcb, -1);
     
     ATCP_LOGERROR1("begin: bind error, err =", err);
-
     return;
   }
 
@@ -2103,13 +2100,77 @@ void AsyncSSLServer::begin()
   if (!_pcb)
   {
     ATCP_LOGERROR("begin: NULL listen_pcb");
-    
     return;
   }
 
   tcp_arg(_pcb, (void*) this);
   tcp_accept(_pcb, &_s_accept);
 }
+
+#if ASYNC_TCP_SSL_ENABLED
+void onSslFileRequest(AcSSlFileHandlerSSL cb, void* arg)
+{
+
+}
+
+void AsyncServer::beginSecure(const char *cert, const char *key, const char *password)
+{
+  if (_pcb)
+  {
+    return;
+  }
+  _secure = true;
+
+  if (!_start_async_task())
+  {
+    ATCP_LOGERROR("beginSecure: failed to start task");
+    return;
+  }
+
+  int8_t err;
+  _pcb = tcp_new_ip_type(IPADDR_TYPE_V4);
+
+  if (!_pcb)
+  {
+    ATCP_LOGERROR("beginSecure: _pcb==NULL");
+    return;
+  }
+
+  ip_addr_t local_addr;
+  local_addr.type = IPADDR_TYPE_V4;
+  local_addr.u_addr.ip4.addr = (uint32_t) _addr;
+  err = _tcp_bind(_pcb, &local_addr, _port);
+
+  if (err != ERR_OK)
+  {
+    _tcp_close(_pcb, -1);
+    ATCP_LOGERROR1("beginSecure: bind error, err =", err);
+    return;
+  }
+
+  static uint8_t backlog = 5;
+  _pcb = _tcp_listen_with_backlog(_pcb, backlog);
+  if (!_pcb)
+  {
+    ATCP_LOGERROR("beginSecure: listen_pcb==NULL");
+    return;
+  }
+
+  //log_d("pcb 0x%08x", _pcb);
+
+  if (tcp_ssl_new_server(_pcb, this, cert, strlen(cert) + 1, key, strlen(key) + 1, password) == 0)
+  {
+    ATCP_LOGERROR("beginSecure: start accepting clients");
+    tcp_arg(_pcb, (void*) this);
+    tcp_accept(_pcb, &_s_accept);
+  }
+  else
+  {
+    end();
+  }
+}
+#endif // ASYNC_TCP_SSL_ENABLED
+
 
 void AsyncSSLServer::end()
 {

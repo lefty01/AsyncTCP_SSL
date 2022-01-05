@@ -96,12 +96,12 @@ typedef std::function<void(void*, AsyncSSLClient*, void *data, size_t len)> AcDa
 typedef std::function<void(void*, AsyncSSLClient*, struct pbuf *pb)> AcPacketHandlerSSL;
 typedef std::function<void(void*, AsyncSSLClient*, uint32_t time)> AcTimeoutHandlerSSL;
 #else
-typedef std::function<void(void*, AsyncSSLClient*)> AcConnectHandler;
-typedef std::function<void(void*, AsyncSSLClient*, size_t len, uint32_t time)> AcAckHandler;
-typedef std::function<void(void*, AsyncSSLClient*, int8_t error)> AcErrorHandler;
-typedef std::function<void(void*, AsyncSSLClient*, void *data, size_t len)> AcDataHandler;
-typedef std::function<void(void*, AsyncSSLClient*, struct pbuf *pb)> AcPacketHandler;
-typedef std::function<void(void*, AsyncSSLClient*, uint32_t time)> AcTimeoutHandler;
+typedef std::function<void(void*, AsyncClient*)> AcConnectHandler;
+typedef std::function<void(void*, AsyncClient*, size_t len, uint32_t time)> AcAckHandler;
+typedef std::function<void(void*, AsyncClient*, int8_t error)> AcErrorHandler;
+typedef std::function<void(void*, AsyncClient*, void *data, size_t len)> AcDataHandler;
+typedef std::function<void(void*, AsyncClient*, struct pbuf *pb)> AcPacketHandler;
+typedef std::function<void(void*, AsyncClient*, uint32_t time)> AcTimeoutHandler;
 #endif
 
 struct tcp_pcb;
@@ -339,10 +339,8 @@ class AsyncSSLServer
     
 #if ASYNC_TCP_SSL_ENABLED
     void onClient(AcConnectHandlerSSL cb, void* arg);
-    
-    // Dummy, so it compiles with ESP Async WebServer library enabled.
-    void onSslFileRequest(AcSSlFileHandlerSSL cb, void* arg) {};
-    void beginSecure(const char *cert, const char *private_key_file, const char *password) {};
+    void onSslFileRequest(AcSSlFileHandlerSSL cb, void* arg);
+    void beginSecure(const char *cert, const char *key, const char *password);
 #else
     void onClient(AcConnectHandler cb, void* arg);    
 #endif
