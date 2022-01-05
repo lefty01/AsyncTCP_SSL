@@ -2108,12 +2108,12 @@ void AsyncSSLServer::begin()
 }
 
 #if ASYNC_TCP_SSL_ENABLED
-void onSslFileRequest(AcSSlFileHandlerSSL cb, void* arg)
+void AsyncSSLServer::onSslFileRequest(AcSSlFileHandlerSSL cb, void* arg)
 {
 
 }
 
-void AsyncServer::beginSecure(const char *cert, const char *key, const char *password)
+void AsyncSSLServer::beginSecure(const char *cert, const char *key, const char *password)
 {
   if (_pcb)
   {
