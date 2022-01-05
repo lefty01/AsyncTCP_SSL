@@ -832,7 +832,11 @@ extern "C"
   Async TCP Client
 */
 
+#if ASYNC_TCP_SSL_ENABLED
+AsyncSSLClient::AsyncSSLClient(tcp_pcb* pcb, tcp_pcb* server_pcb)
+#else
 AsyncSSLClient::AsyncSSLClient(tcp_pcb* pcb)
+#endif
   : _connect_cb(0)
   , _connect_cb_arg(0)
   , _discard_cb(0)
@@ -879,6 +883,23 @@ AsyncSSLClient::AsyncSSLClient(tcp_pcb* pcb)
     tcp_sent(_pcb, &_tcp_sent);
     tcp_err(_pcb, &_tcp_error);
     tcp_poll(_pcb, &_tcp_poll, 1);
+#if ASYNC_TCP_SSL_ENABLED
+    if (server_pcb)
+    {
+      if (tcp_ssl_new_server_client(_pcb, this, server_pcb) < 0)
+      {
+	_close();
+	return;
+      }
+      tcp_ssl_data(_pcb, &_s_data);
+      tcp_ssl_handshake(_pcb, &_s_handshake);
+      tcp_ssl_err(_pcb, &_s_ssl_error);
+
+      _pcb_secure = true;
+      _handshake_done = false;
+    }
+#endif
+
   }
 }
 
@@ -2235,7 +2256,7 @@ int8_t AsyncSSLServer::_accepted(AsyncSSLClient* client)
 #if ASYNC_TCP_SSL_ENABLED
   if (_secure)
   {
-    client->onConnect([this](void * arg, AsyncClient *c)
+    client->onConnect([this](void * arg, AsyncSSLClient *c)
     {
       _connect_cb(_connect_cb_arg, c);
     }, this);

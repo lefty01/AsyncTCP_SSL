@@ -470,6 +470,141 @@ int tcp_ssl_new_client(struct tcp_pcb *tcp, void *arg, const char* hostname, con
   return ERR_OK;
 }
 
+int tcp_ssl_new_server(struct tcp_pcb *tcp, void *arg, const char *cert, const size_t cert_len, const char *private_key, const size_t private_key_len, const char *password) {
+  tcp_ssl_t* tcp_ssl;
+
+  if(tcp == NULL) {
+    return -1;
+  }
+
+  if(tcp_ssl_get(tcp) != NULL){
+    return -1;
+  }
+
+  tcp_ssl = tcp_ssl_new(tcp, arg);
+  if(tcp_ssl == NULL){
+    return -1;
+  }
+
+  int ret;
+  mbedtls_ssl_init( &tcp_ssl->ssl_ctx );
+  mbedtls_ssl_config_init( &tcp_ssl->ssl_conf );
+  mbedtls_x509_crt_init( &tcp_ssl->ca_cert );
+  mbedtls_pk_init( &tcp_ssl->client_key );
+  mbedtls_entropy_init( &tcp_ssl->entropy_ctx );
+  mbedtls_ctr_drbg_init( &tcp_ssl->drbg_ctx );
+
+  tcp_ssl->has_entropy_ctx = true;
+  tcp_ssl->has_ssl_conf = true;
+  tcp_ssl->has_ca_cert = true;
+  tcp_ssl->has_client_key = true;
+  tcp_ssl->has_drbg_ctx = true;
+
+  /*
+    * 1. Load the certificates and private RSA key
+    */
+  TCP_SSL_DEBUG("Loading the server cert\n");
+  ret = mbedtls_x509_crt_parse(&tcp_ssl->ca_cert, (const unsigned char *) cert, cert_len);
+  if (ret != 0) {
+      TCP_SSL_DEBUG("failed loading server cert, returned %d\n", ret);
+      tcp_ssl_free(tcp);
+      return handle_error(ret);
+  }
+
+  TCP_SSL_DEBUG("Loading the server key\n");
+  ret = mbedtls_pk_parse_key(&tcp_ssl->client_key, (const unsigned char *) private_key, private_key_len, NULL, 0);
+  if (ret != 0) {
+      TCP_SSL_DEBUG("failed loading server private key, returned %d\n", ret); 
+      tcp_ssl_free(tcp);
+      return handle_error(ret);
+  }
+
+  /*
+    * 3. Seed the RNG
+    */
+  TCP_SSL_DEBUG("Seeding the random number generator...\n" );
+  ret = mbedtls_ctr_drbg_seed(&tcp_ssl->drbg_ctx, mbedtls_entropy_func, &tcp_ssl->entropy_ctx,
+                              (const unsigned char *) pers,
+                              sizeof(pers));
+  if (ret != 0) {
+      TCP_SSL_DEBUG("failed seeding the random number generator, returned %d\n", ret);
+      tcp_ssl_free(tcp);
+      return handle_error(ret);
+  }
+
+  /*
+    * 4. Setup stuff
+    */
+  TCP_SSL_DEBUG("Setting up the SSL data...\n" );
+  ret = mbedtls_ssl_config_defaults( &tcp_ssl->ssl_conf,
+                  MBEDTLS_SSL_IS_SERVER,
+                  MBEDTLS_SSL_TRANSPORT_STREAM,
+                  MBEDTLS_SSL_PRESET_DEFAULT );
+  if (ret != 0) {
+      TCP_SSL_DEBUG("failed mbedtls_ssl_config_defaults returned %d\n", ret);
+      tcp_ssl_free(tcp);
+      return handle_error(ret);
+  }
+
+  mbedtls_ssl_conf_rng(&tcp_ssl->ssl_conf, mbedtls_ctr_drbg_random, &tcp_ssl->drbg_ctx);
+
+
+  mbedtls_ssl_conf_ca_chain(&tcp_ssl->ssl_conf, tcp_ssl->ca_cert.next, NULL);
+  ret = mbedtls_ssl_conf_own_cert(&tcp_ssl->ssl_conf, &tcp_ssl->ca_cert, &tcp_ssl->client_key);
+  if (ret != 0) {
+      TCP_SSL_DEBUG("failed mbedtls_ssl_conf_own_cert returned %d\n", ret);
+      tcp_ssl_free(tcp);
+      return handle_error(ret);
+  }
+
+  ret = mbedtls_ssl_setup(&tcp_ssl->ssl_ctx, &tcp_ssl->ssl_conf);
+  if (ret != 0) {
+      TCP_SSL_DEBUG("failed mbedtls_ssl_setup returned %d\n", ret);
+      tcp_ssl_free(tcp);
+      return handle_error(ret);
+  }
+
+  TCP_SSL_DEBUG("tcp_ssl_new_server completed succesfully\n");
+
+  return ERR_OK;
+}
+
+int tcp_ssl_new_server_client(struct tcp_pcb *tcp, void *arg, struct tcp_pcb *server_tcp) {
+  tcp_ssl_t* tcp_ssl;
+  tcp_ssl_t* server_tcp_ssl;
+
+  if(tcp == NULL || server_tcp == NULL) {
+    return -1;
+  }
+
+  if(tcp_ssl_get(tcp) != NULL){
+    return -1;
+  }
+
+  server_tcp_ssl = tcp_ssl_get(server_tcp);
+  if (server_tcp_ssl == NULL) {
+    return -1;
+  }
+
+  tcp_ssl = tcp_ssl_new(tcp, arg);
+  if(tcp_ssl == NULL){
+    return -1;
+  }
+
+  int ret;
+
+  mbedtls_ssl_init(&tcp_ssl->ssl_ctx);
+  ret = mbedtls_ssl_setup(&tcp_ssl->ssl_ctx, &server_tcp_ssl->ssl_conf);
+  if (ret != 0) {
+    TCP_SSL_DEBUG("failed: mbedtls_ssl_setup returned -0x%04x\n", -ret );
+    return handle_error(ret);
+  }
+
+  mbedtls_ssl_set_bio(&tcp_ssl->ssl_ctx, (void*)tcp_ssl, tcp_ssl_send, tcp_ssl_recv, NULL);
+
+  return ERR_OK;
+}
+
 // Open an SSL connection using a PSK (pre-shared-key) cipher suite.
 int tcp_ssl_new_psk_client(struct tcp_pcb *tcp, void *arg, const char* psk_ident, const char* pskey)
 {
