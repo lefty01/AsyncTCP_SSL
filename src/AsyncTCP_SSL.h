@@ -110,7 +110,11 @@ struct ip_addr;
 class AsyncSSLClient 
 {
   public:
+#if ASYNC_TCP_SSL_ENABLED
+    AsyncSSLClient(tcp_pcb* pcb = 0, tcp_pcb* server_pcb = 0);
+#else
     AsyncSSLClient(tcp_pcb* pcb = 0);
+#endif
     ~AsyncSSLClient();
 
     AsyncSSLClient & operator=(const AsyncSSLClient &other);
